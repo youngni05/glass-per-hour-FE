@@ -1,7 +1,8 @@
 // src/pages/Result.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
+import { API_BASE_URL } from "../api";
 import level0Img from "../assets/images/level0.jpg";
 import level1Img from "../assets/images/level1.jpg";
 import level2Img from "../assets/images/level2.jpg";
@@ -36,12 +37,13 @@ export default function ResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { nickname, level, seconds, drinks, aiMessage } = (location.state as {
+  const { nickname, level, seconds, drinks, aiMessage: initialAiMessage, userId } = (location.state as {
     nickname: string;
     level: string;
     seconds: number;
     drinks: Record<string, number>;
     aiMessage: string;
+    userId?: number;
   }) || {
     nickname: "Guest",
     seconds: 0,
@@ -49,6 +51,29 @@ export default function ResultPage() {
     level: "level0",
     aiMessage: "측정된 데이터가 없습니다.",
   };
+
+  const [aiMessage, setAiMessage] = useState(initialAiMessage);
+
+  useEffect(() => {
+    if (!userId || (aiMessage && aiMessage !== "AI 분석 중...")) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/ai-message`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.aiMessage && data.aiMessage !== "AI 분석 중...") {
+            setAiMessage(data.aiMessage);
+            clearInterval(interval);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI message:", error);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [userId, aiMessage]);
 
   const labels: Record<keyof Drinks, string> = {
     soju: "소주",

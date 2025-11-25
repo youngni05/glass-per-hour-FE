@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DrinkList from "./DrinkList";
 import Button from "../../components/ui/Button";
+import { API_BASE_URL } from "../../api";
 
 // 로컬 이미지 import
 import sojuImg from "../../assets/images/소주.jpg";
@@ -27,11 +28,29 @@ export default function MeasurePage() {
     fruitsoju: 0,
   });
 
-  const updateDrink = (type: keyof typeof drinks, amount: number) => {
+  const updateDrink = async (type: keyof typeof drinks, amount: number) => {
+    // 1. 상태 업데이트 (낙관적 업데이트)
     setDrinks((prev) => ({
       ...prev,
       [type]: Math.max(prev[type] + amount, 0),
     }));
+
+    // 2. 백엔드 전송 (userId가 있을 때만)
+    const userId = (location.state as { userId?: number })?.userId;
+    if (userId && amount > 0) {
+      try {
+        await fetch(`${API_BASE_URL}/users/${userId}/drinks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            drinkType: type.toUpperCase(), // BE enum: SOJU, BEER, etc.
+            glassCount: amount,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to record drink:", error);
+      }
+    }
   };
 
   // 타이머
@@ -41,51 +60,65 @@ export default function MeasurePage() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  const handleEnd = () => {
+  const handleEnd = async () => {
     setIsRunning(false);
+    const userId = (location.state as { userId?: number })?.userId;
 
-    //여기는 프론트에서 동작하는 거 확인할려고 임의로 작성한 레벨, AI분석 메시지입니다.
-    // 여기서 백엔드에 drinks, seconds, nickname 보내는 로직 가능
-    // 예시: fetch('/api/result', { method:'POST', body: JSON.stringify({nickname, drinks, seconds}) })
+    if (!userId) {
+      // userId가 없으면(테스트 등) 기존 로직대로 이동
+      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
+      let level = "level0";
+      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
+      else if (totalDrinks <= 6) level = "level2";
+      else if (totalDrinks <= 9) level = "level3";
+      else level = "level4";
 
-    // 임시 AI 메시지 생성
-    const aiMessage = `안녕하세요 ${nickname}님! 총 ${seconds}초 동안 술을 마셨네요. 적절히 즐기셨습니다.`;
-
-    // 술레벨 결정 (예시, 간단히 총 잔 수로)
-    const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-    let level = "level0";
-    if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-    else if (totalDrinks <= 6) level = "level2";
-    else if (totalDrinks <= 9) level = "level3";
-    else level = "level4";
-
-    navigate("/result", {
-      state: { nickname, seconds, drinks, level, aiMessage },
-    });
-  };
-
-  /* 백엔드와 연동하는 코드 예시
-   const handleEnd = async () => {
-    setIsRunning(false);
+      const aiMessage = `(오프라인 모드) ${nickname}님! 총 ${seconds}초 동안 마셨네요.`;
+      navigate("/result", {
+        state: { nickname, seconds, drinks, level, aiMessage },
+      });
+      return;
+    }
 
     try {
-      // 백엔드 API 호출
-      const response = await fetch("/api/drunk-level", {
+      // 1. 종료 API 호출
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/finish`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname, drinks, seconds }),
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to finish session");
+      }
+
       const data = await response.json();
+      // BE now returns User object immediately, AI message might be null initially
+      const aiMessage = data.aiMessage || "AI 분석 중...";
 
-      const level = data.level;        // AI 계산 술레벨
-      const aiMessage = data.message;  // AI 개인 설명
+      // 2. 결과 조회를 위해 유저 정보 가져오기 (혹은 룸 정보)
+      // 현재 finish API는 void 반환이므로, 계산된 결과를 얻으려면 별도 조회가 필요할 수 있음.
+      // 하지만 간단히 프론트에서 계산하거나, BE에서 계산된 값을 믿을 수 있음.
+      // 여기서는 BE 로직(RankingCalculator)과 동일하게 레벨을 보여주기 위해
+      // BE의 User 정보를 조회하는 API가 있다면 좋겠지만, 
+      // 일단 프론트에서 계산해서 넘기거나, finish 응답에 결과를 포함시키는게 좋음.
+      // 현재 BE finish는 void이므로, 프론트에서 계산 로직 유지 혹은 추가 조회 필요.
 
-      navigate("/result", { state: { nickname, level, drinks, seconds, aiMessage } });
+      // 임시: 프론트 계산 로직 유지하되, BE 데이터 동기화는 추후 고려
+      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
+      let level = "level0";
+      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
+      else if (totalDrinks <= 6) level = "level2";
+      else if (totalDrinks <= 9) level = "level3";
+      else level = "level4";
+
+      navigate("/result", {
+        state: { nickname, seconds, drinks, level, aiMessage, userId },
+      });
+
     } catch (error) {
-      console.error("술레벨 계산 오류:", error);
-      alert("결과를 가져오는 데 실패했습니다.");
+      console.error("Error finishing session:", error);
+      alert("결과 저장 중 오류가 발생했습니다.");
     }
-  };*/
+  };
 
   const drinkImages = {
     soju: sojuImg,
