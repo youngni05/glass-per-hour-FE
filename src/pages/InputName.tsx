@@ -1,0 +1,58 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/ui/Button";
+import nameImg from "../assets/images/이름_입력.png";
+
+export default function InputName() {
+  const [nickname, setNickname] = useState("");
+  const navigate = useNavigate();
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNickname(e.target.value);
+  };
+
+  const handleStart = () => {
+    if (nickname.trim() === "") {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+    navigate("/measure", { state: { nickname } });
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column", // 세로로 배치
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        gap: "20px", // 요소 사이 간격
+      }}
+    >
+      {/* 이미지 */}
+      <img
+        src={nameImg}
+        alt="재밌는 이미지"
+        style={{ width: "500px", height: "auto", borderRadius: "10px" }}
+      />
+
+      {/* 닉네임 입력창 */}
+      <input
+        type="text"
+        placeholder="닉네임을 입력하세요"
+        value={nickname}
+        onChange={handleChange}
+        style={{
+          padding: "10px 15px",
+          fontSize: "16px",
+          borderRadius: "8px",
+          border: "1px solid #000",
+          width: "250px",
+        }}
+      />
+
+      {/* 주량 측정 버튼 */}
+      <Button onClick={handleStart}>주량 측정하기</Button>
+    </div>
+  );
+}
