@@ -12,15 +12,18 @@ import makgeolliImg from "../../assets/images/막걸리.jpg";
 import fruitsojuImg from "../../assets/images/과일소주.jpg";
 
 export default function MeasurePage() {
+  // useLocation: 이전 페이지(InputName)에서 navigate state로 넘겨준 데이터(nickname, userId)를 받기 위해 사용
   const location = useLocation();
+  // useNavigate: 다른 페이지로 이동하기 위해 사용
   const navigate = useNavigate();
-  const nickname =
-    (location.state as { nickname: string })?.nickname || "Guest";
 
-  const [seconds, setSeconds] = useState(0);
-  const [isRunning, setIsRunning] = useState(true);
+  // 이전 페이지에서 받은 nickname, 없으면 'Guest'
+  const nickname = (location.state as { nickname: string })?.nickname || "Guest";
 
-  const [drinks, setDrinks] = useState({
+  // useState: 컴포넌트의 상태(데이터)를 관리
+  const [seconds, setSeconds] = useState(0); // 타이머 시간 (초)
+  const [isRunning, setIsRunning] = useState(true); // 타이머 실행 상태
+  const [drinks, setDrinks] = useState({ // 마신 술의 종류별 잔 수
     soju: 0,
     beer: 0,
     somaek: 0,
@@ -28,98 +31,78 @@ export default function MeasurePage() {
     fruitsoju: 0,
   });
 
+  // 술잔 수를 업데이트하는 함수 (+, - 버튼 클릭 시 호출됨)
   const updateDrink = async (type: keyof typeof drinks, amount: number) => {
-    // 1. 상태 업데이트 (낙관적 업데이트)
+    // 1. 화면에 즉시 반영 (낙관적 업데이트)
     setDrinks((prev) => ({
       ...prev,
-      [type]: Math.max(prev[type] + amount, 0),
+      [type]: Math.max(prev[type] + amount, 0), // 0잔 미만으로 내려가지 않도록
     }));
 
-    // 2. 백엔드 전송 (userId가 있을 때만)
+    // 2. [수정된 부분] 백엔드에 주량 기록 API를 호출합니다.
     const userId = (location.state as { userId?: number })?.userId;
+    // userId가 있고, 잔을 추가하는 경우(+1)에만 API 호출
     if (userId && amount > 0) {
       try {
         await fetch(`${API_BASE_URL}/users/${userId}/drinks`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            drinkType: type.toUpperCase(), // BE enum: SOJU, BEER, etc.
+            drinkType: type.toUpperCase(), // 백엔드 Enum 형식에 맞게 대문자로 변환
             glassCount: amount,
           }),
         });
       } catch (error) {
-        console.error("Failed to record drink:", error);
+        console.error("주량 기록 API 호출 실패:", error);
+        // 필요하다면 여기서 사용자에게 에러를 알릴 수 있습니다.
       }
     }
   };
 
-  // 타이머
+  // useEffect: 특정 상태(isRunning)가 변경될 때마다 특정 작업(타이머)을 수행하기 위해 사용
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning) return; // 타이머가 멈췄으면 아무것도 안 함
+    // 1초(1000ms)마다 seconds 상태를 1씩 증가시킴
     const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
+    // 컴포넌트가 사라지거나 isRunning 상태가 바뀌기 직전에 interval을 정리(cleanup)합니다.
+    // 이렇게 하지 않으면 메모리 누수가 발생할 수 있습니다.
     return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning]); // isRunning 값이 바뀔 때마다 이 useEffect가 다시 실행됩니다.
 
-  const handleEnd = async () => {
-    setIsRunning(false);
+  // '술자리 끝내기' 버튼 클릭 시 실행되는 함수
+  const handleEnd = () => {
+    setIsRunning(false); // 타이머 멈춤
     const userId = (location.state as { userId?: number })?.userId;
 
     if (!userId) {
-      // userId가 없으면(테스트 등) 기존 로직대로 이동
-      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-      let level = "level0";
-      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-      else if (totalDrinks <= 6) level = "level2";
-      else if (totalDrinks <= 9) level = "level3";
-      else level = "level4";
-
-      const aiMessage = `(오프라인 모드) ${nickname}님! 총 ${seconds}초 동안 마셨네요.`;
-      navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage },
-      });
+      alert("사용자 ID가 없어 결과를 저장할 수 없습니다.");
+      navigate("/"); // 문제가 생겼으므로 홈으로 돌려보냄
       return;
     }
 
-    try {
-      // 1. 종료 API 호출
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/finish`, {
-        method: "POST",
-      });
+    // [수정된 부분] UX 개선: API 응답을 기다리지 않고 결과 페이지로 즉시 이동
+    // 'Fire and Forget' 방식으로 API 호출
+    fetch(`${API_BASE_URL}/users/${userId}/finish`, {
+      method: "POST",
+    }).catch(error => {
+      // 백그라운드에서 발생한 에러는 사용자에게 알리지 않고 콘솔에만 기록
+      console.error("측정 종료 API 호출 실패 (백그라운드):", error);
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to finish session");
-      }
-
-      const data = await response.json();
-      // BE now returns User object immediately, AI message might be null initially
-      const aiMessage = data.aiMessage || "AI 분석 중...";
-
-      // 2. 결과 조회를 위해 유저 정보 가져오기 (혹은 룸 정보)
-      // 현재 finish API는 void 반환이므로, 계산된 결과를 얻으려면 별도 조회가 필요할 수 있음.
-      // 하지만 간단히 프론트에서 계산하거나, BE에서 계산된 값을 믿을 수 있음.
-      // 여기서는 BE 로직(RankingCalculator)과 동일하게 레벨을 보여주기 위해
-      // BE의 User 정보를 조회하는 API가 있다면 좋겠지만, 
-      // 일단 프론트에서 계산해서 넘기거나, finish 응답에 결과를 포함시키는게 좋음.
-      // 현재 BE finish는 void이므로, 프론트에서 계산 로직 유지 혹은 추가 조회 필요.
-
-      // 임시: 프론트 계산 로직 유지하되, BE 데이터 동기화는 추후 고려
-      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-      let level = "level0";
-      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-      else if (totalDrinks <= 6) level = "level2";
-      else if (totalDrinks <= 9) level = "level3";
-      else level = "level4";
-
-      navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage, userId },
-      });
-
-    } catch (error) {
-      console.error("Error finishing session:", error);
-      alert("결과 저장 중 오류가 발생했습니다.");
-    }
+    // API 응답을 기다리지 않고 즉시 결과 페이지로 이동
+    navigate("/result", {
+      state: {
+        nickname,
+        seconds,
+        drinks,
+        level: "level-loading", // 최종 레벨은 결과 페이지에서 로딩 후 표시할 예정
+        aiMessage: "AI 분석 중...", // AI 메시지도 결과 페이지에서 폴링으로 가져옴
+        userId,
+      },
+    });
   };
 
+  // 술 이미지 맵
   const drinkImages = {
     soju: sojuImg,
     beer: beerImg,
@@ -128,16 +111,14 @@ export default function MeasurePage() {
     fruitsoju: fruitsojuImg,
   };
 
+  // 초를 HH:MM:SS 형식으로 변환하는 함수
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-
-    // 두 자리로 맞추기 위해 padStart 사용
     const hh = String(hours).padStart(2, "0");
     const mm = String(minutes).padStart(2, "0");
     const ss = String(seconds).padStart(2, "0");
-
     return `${hh}:${mm}:${ss}`;
   };
 
