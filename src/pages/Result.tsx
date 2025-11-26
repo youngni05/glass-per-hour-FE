@@ -96,7 +96,15 @@ export default function ResultPage() {
     // 2초마다 백엔드에 AI 메시지가 완성되었는지 물어보는 interval 설정
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/ai-message`);
+        const response = await fetch(
+          `${API_BASE_URL}/users/${userId}/ai-message`
+        );
+        // [수정된 부분] 사용자를 찾을 수 없는 경우(404), 폴링을 중단합니다.
+        if (response.status === 404) {
+          console.error("AI 메시지 폴링 중단: 사용자를 찾을 수 없습니다.");
+          clearInterval(interval);
+          return;
+        }
         if (response.ok) {
           const data = await response.json();
           // 메시지가 완성되었으면 상태를 업데이트하고 interval을 중단합니다.
