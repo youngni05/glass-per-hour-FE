@@ -16,7 +16,7 @@ export default function MeasurePage() {
   const nickname =
     (location.state as { nickname: string })?.nickname || "Guest";
 
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(5000); //useState(0);
   const [isRunning, setIsRunning] = useState(true);
 
   const [drinks, setDrinks] = useState({
@@ -44,6 +44,34 @@ export default function MeasurePage() {
   const handleEnd = () => {
     setIsRunning(false);
 
+    // 소주 환산 잔 계산
+    const sojuEq =
+      drinks.soju +
+      drinks.beer * 0.7 +
+      drinks.somaek * 1.3 +
+      drinks.makgeolli * 0.8 +
+      drinks.fruitsoju * 0.5;
+
+    // gph 계산
+    const hours = seconds / 3600;
+    const gph = hours > 0 ? Math.round(sojuEq / hours) : 0;
+
+    const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
+    let bottleText = "";
+    if (bottles === 0) {
+      bottleText = "0병";
+    } else {
+      const full = Math.floor(bottles);
+      const half = bottles % 1 === 0.5;
+      if (full === 0 && half) {
+        bottleText = "반병";
+      } else if (half) {
+        bottleText = `${full}병 반`;
+      } else {
+        bottleText = `${full}병`;
+      }
+    }
+
     //여기는 프론트에서 동작하는 거 확인할려고 임의로 작성한 레벨, AI분석 메시지입니다.
     // 여기서 백엔드에 drinks, seconds, nickname 보내는 로직 가능
     // 예시: fetch('/api/result', { method:'POST', body: JSON.stringify({nickname, drinks, seconds}) })
@@ -51,16 +79,26 @@ export default function MeasurePage() {
     // 임시 AI 메시지 생성
     const aiMessage = `안녕하세요 ${nickname}님! 총 ${seconds}초 동안 술을 마셨네요. 적절히 즐기셨습니다.`;
 
-    // 술레벨 결정 (예시, 간단히 총 잔 수로)
+    /* 술레벨 결정 (예시, 간단히 총 잔 수로)
     const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
     let level = "level0";
     if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
     else if (totalDrinks <= 6) level = "level2";
     else if (totalDrinks <= 9) level = "level3";
-    else level = "level4";
+    else level = "level4";*/
+
+    function getLevel(bottles: number): string {
+      if (bottles <= 0.5) return "level0"; // 0~0.5병
+      else if (bottles <= 1.5) return "level1"; // 0.5~1.5병 → level1
+      else if (bottles <= 2) return "level3"; // 1.5~2병 → level3
+      else return "level4"; // 2.5병 이상 → level4
+    }
+
+    // Measure.tsx나 Result.tsx에서 사용
+    const level = getLevel(bottles);
 
     navigate("/result", {
-      state: { nickname, seconds, drinks, level, aiMessage },
+      state: { nickname, seconds, drinks, level, aiMessage, gph, bottleText },
     });
   };
 
