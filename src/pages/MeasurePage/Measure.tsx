@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DrinkList from "./DrinkList";
 import Button from "../../components/ui/Button";
+import RankingList from "./RankingList";
 
 // 로컬 이미지 import
 import sojuImg from "../../assets/images/소주.jpg";
@@ -32,6 +33,17 @@ export default function MeasurePage() {
       ...prev,
       [type]: Math.max(prev[type] + amount, 0),
     }));
+  };
+
+  // 소주 환산 함수 정의
+  const calcSojuEq = () => {
+    return (
+      drinks.soju +
+      drinks.beer * 0.7 +
+      drinks.somaek * 1.3 +
+      drinks.makgeolli * 0.8 +
+      drinks.fruitsoju * 0.5
+    );
   };
 
   // 타이머
@@ -79,17 +91,10 @@ export default function MeasurePage() {
     // 임시 AI 메시지 생성
     const aiMessage = `안녕하세요 ${nickname}님! 총 ${seconds}초 동안 술을 마셨네요. 적절히 즐기셨습니다.`;
 
-    /* 술레벨 결정 (예시, 간단히 총 잔 수로)
-    const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-    let level = "level0";
-    if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-    else if (totalDrinks <= 6) level = "level2";
-    else if (totalDrinks <= 9) level = "level3";
-    else level = "level4";*/
-
     function getLevel(bottles: number): string {
       if (bottles <= 0.5) return "level0"; // 0~0.5병
-      else if (bottles <= 1.5) return "level1"; // 0.5~1.5병 → level1
+      else if (bottles <= 1) return "level1"; // 0.5~1병 → level1
+      else if (bottles <= 1.5) return "level2"; // 0.5~1.5병 → level2
       else if (bottles <= 2) return "level3"; // 1.5~2병 → level3
       else return "level4"; // 2.5병 이상 → level4
     }
@@ -161,6 +166,7 @@ export default function MeasurePage() {
       />
 
       <Button onClick={handleEnd}>술자리 끝내기</Button>
+      <RankingList nickname={nickname} sojuEq={calcSojuEq()} />
     </div>
   );
 }

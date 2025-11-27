@@ -6,33 +6,41 @@ import nameImg from "../assets/images/이름_입력.png";
 export default function InputName() {
   const [nickname, setNickname] = useState("");
   const navigate = useNavigate();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNickname(e.target.value);
   };
 
-  const handleStart = () => {
+  const handleCreateRoom = () => {
     if (nickname.trim() === "") {
       alert("닉네임을 입력해주세요.");
       return;
     }
-    navigate("/measure", { state: { nickname } });
+    navigate("/waiting-room", { state: { nickname, isHost: true } });
+  };
+
+  const handleJoinRoom = () => {
+    if (nickname.trim() === "") {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+    navigate("/join-room", { state: { nickname, isHost: false } });
   };
 
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column", // 세로로 배치
+        flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        gap: "20px", // 요소 사이 간격
+        gap: "20px",
       }}
     >
-      {/* 이미지 */}
       <img
         src={nameImg}
-        alt="재밌는 이미지"
+        alt="이름 입력해요!!"
         style={{ width: "500px", height: "auto", borderRadius: "10px" }}
       />
 
@@ -52,7 +60,10 @@ export default function InputName() {
       />
 
       {/* 주량 측정 버튼 */}
-      <Button onClick={handleStart}>주량 측정하기</Button>
+      <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+        <Button onClick={handleCreateRoom}>방 만들기</Button>
+        <Button onClick={handleJoinRoom}>방 참여하기</Button>
+      </div>
     </div>
   );
 }
