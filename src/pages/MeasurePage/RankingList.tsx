@@ -1,47 +1,54 @@
-// src/components/RankingList.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import html2canvas from "html2canvas";
+import { getRankings } from "../../api/api";
+import { User } from "../../api/api"; // Import the User interface
+import Button from "../../components/ui/Button";
 
-// 랭킹 항목 데이터 구조 정의 (닉네임과 소주 잔 수)
-interface RankItem {
-  nickname: string;
-  sojuEq: number; // 소주 환산 잔 수
-}
-
-// Props 구조 정의
+// Props structure now only needs the current user's name to highlight them
 interface RankingProps {
   nickname: string;
-  sojuEq: number; // 현재 사용자의 소주 환산 잔 수
 }
 
-// ⚠️ MOCK 데이터: 백엔드 연결 전까지 사용하는 가짜 데이터
-const MOCK_RANKINGS: RankItem[] = [
-  { nickname: "주왕1호", sojuEq: 32.0 },
-  { nickname: "만취요정", sojuEq: 28.0 },
-  { nickname: "알콜몬", sojuEq: 21.0 },
-  { nickname: "소주짱", sojuEq: 14.0 },
-  { nickname: "음료수", sojuEq: 7.0 },
-  { nickname: "해장중", sojuEq: 24.0 },
-  { nickname: "취한곰", sojuEq: 18.0 },
-  { nickname: "술고래", sojuEq: 12.0 },
-  { nickname: "맥주천사", sojuEq: 9.0 },
-  { nickname: "청하", sojuEq: 5.0 },
-];
+export default function RankingList({ nickname }: RankingProps) {
+  const [rankings, setRankings] = useState<User[]>([]);
+  const rankingRef = useRef<HTMLDivElement>(null); // Ref for capturing the component
 
-export default function RankingList({ nickname, sojuEq }: RankingProps) {
-  const [displayRankings, setDisplayRankings] = useState<RankItem[]>([]);
+  // Function to fetch and update rankings
+  const fetchRankings = async () => {
+    try {
+      const data = await getRankings();
+      // The backend already sorts by totalSojuEquivalent, so no need to sort here.
+      setRankings(data);
+    } catch (error) {
+      console.error("Failed to fetch rankings:", error);
+      // Don't show an alert to avoid interrupting the user repeatedly
+    }
+  };
 
+  // useEffect for initial fetch and auto-refresh
   useEffect(() => {
-    const currentUserRecord: RankItem = { nickname, sojuEq };
+    fetchRankings(); // Initial fetch
 
-    // MOCK 데이터 복사 + 현재 사용자 기록 반영
-    let list = MOCK_RANKINGS.filter((item) => item.nickname !== nickname);
-    list = [...list, currentUserRecord];
+    const intervalId = setInterval(() => {
+      fetchRankings();
+    }, 5000); // Auto-refresh every 5 seconds
 
-    // 소주 잔 수 기준 내림차순 정렬
-    list.sort((a, b) => b.sojuEq - a.sojuEq);
+    // Cleanup function to clear the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, []);
 
-    setDisplayRankings(list);
-  }, [nickname, sojuEq]);
+  // Function to handle sharing
+  const handleShare = () => {
+    if (rankingRef.current) {
+      html2canvas(rankingRef.current).then((canvas) => {
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = image;
+        link.download = "my-ranking.png";
+        link.click();
+      });
+    }
+  };
 
   return (
     <div
@@ -51,46 +58,52 @@ export default function RankingList({ nickname, sojuEq }: RankingProps) {
         textAlign: "center",
       }}
     >
-      <h2 style={{ marginBottom: "15px" }}>
-        <span role="img" aria-label="trophy">
-          🏆
-        </span>{" "}
-        실시간 랭킹
-      </h2>
+      <div ref={rankingRef} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
+        <h2 style={{ marginBottom: "15px" }}>
+          <span role="img" aria-label="trophy">
+            🏆
+          </span>{" "}
+          실시간 랭킹
+        </h2>
 
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {displayRankings.map((item, idx) => {
-            const isCurrentUser = item.nickname === nickname;
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {rankings.map((user, idx) => {
+              const isCurrentUser = user.userName === nickname;
 
-            const itemStyle: React.CSSProperties = {
-              padding: "10px 15px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontSize: "16px",
-              borderBottom:
-                idx === displayRankings.length - 1 ? "none" : "1px solid #eee",
-              backgroundColor: isCurrentUser ? "#e6f7ff" : "white",
-              fontWeight: isCurrentUser ? "bold" : "normal",
-            };
+              const itemStyle: React.CSSProperties = {
+                padding: "10px 15px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                fontSize: "16px",
+                borderBottom:
+                  idx === rankings.length - 1 ? "none" : "1px solid #eee",
+                backgroundColor: isCurrentUser ? "#e6f7ff" : "white",
+                fontWeight: isCurrentUser ? "bold" : "normal",
+              };
 
-            return (
-              <li key={item.nickname} style={itemStyle}>
-                <div>
-                  <strong>{idx + 1}.</strong> {item.nickname}
-                </div>
-                <div>{Math.round(item.sojuEq)} 잔</div>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={user.id} style={itemStyle}>
+                  <div>
+                    <strong>{idx + 1}.</strong> {user.userName}
+                  </div>
+                  {/* Use totalSojuEquivalent from the User object */}
+                  <div>{Math.round(user.totalSojuEquivalent)} 잔</div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+      <div style={{ marginTop: '20px' }}>
+        <Button onClick={handleShare}>랭킹 이미지로 공유하기</Button>
       </div>
     </div>
   );

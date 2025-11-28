@@ -30,8 +30,6 @@ export default function InputName() {
     } catch (error) {
       console.error("API Error:", error);
       alert("서버 연결에 실패했습니다. 백엔드가 실행 중인지 확인해주세요.");
-      // For testing purposes, you can uncomment the line below to proceed even if the API fails
-      // navigate("/measure", { state: { nickname, userId: 1 } });
     }
   };
 

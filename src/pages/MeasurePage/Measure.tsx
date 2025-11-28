@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DrinkList from "./DrinkList";
 import Button from "../../components/ui/Button";
-import { API_BASE_URL } from "../../api";
+import { addDrink, finishUser } from "../../api/api"; // Use the new API functions
 import RankingList from "./RankingList";
 
-// 로컬 이미지 import
+// Local image imports
 import sojuImg from "../../assets/images/소주.jpg";
 import beerImg from "../../assets/images/맥주.jpg";
 import somaekImg from "../../assets/images/소맥.jpg";
@@ -15,8 +15,7 @@ import fruitsojuImg from "../../assets/images/과일소주.jpg";
 export default function MeasurePage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const nickname =
-    (location.state as { nickname: string })?.nickname || "Guest";
+  const { nickname = "Guest", userId } = (location.state as { nickname?: string, userId?: number }) || {};
 
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
@@ -30,42 +29,22 @@ export default function MeasurePage() {
   });
 
   const updateDrink = async (type: keyof typeof drinks, amount: number) => {
-    // 1. 상태 업데이트 (낙관적 업데이트)
     setDrinks((prev) => ({
       ...prev,
       [type]: Math.max(prev[type] + amount, 0),
     }));
 
-    // 2. 백엔드 전송 (userId가 있을 때만)
-    const userId = (location.state as { userId?: number })?.userId;
     if (userId && amount > 0) {
       try {
-        await fetch(`${API_BASE_URL}/users/${userId}/drinks`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            drinkType: type.toUpperCase(), // BE enum: SOJU, BEER, etc.
-            glassCount: amount,
-          }),
-        });
+        // Use the new addDrink function
+        await addDrink(userId, type.toUpperCase(), amount);
       } catch (error) {
         console.error("Failed to record drink:", error);
       }
     }
   };
 
-  // 소주 환산 함수 정의
-  const calcSojuEq = () => {
-    return (
-      drinks.soju +
-      drinks.beer * 0.7 +
-      drinks.somaek * 1.3 +
-      drinks.makgeolli * 0.8 +
-      drinks.fruitsoju * 0.5
-    );
-  };
-
-  // 타이머
+  // Timer effect
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -74,9 +53,8 @@ export default function MeasurePage() {
 
   const handleEnd = async () => {
     setIsRunning(false);
-    const userId = (location.state as { userId?: number })?.userId;
 
-    // --- 클라이언트 측 계산 (from test branch) ---
+    // Client-side calculations for immediate feedback
     const sojuEq =
       drinks.soju +
       drinks.beer * 0.7 +
@@ -86,104 +64,57 @@ export default function MeasurePage() {
 
     const hours = seconds / 3600;
     const gph = hours > 0 ? Math.round(sojuEq / hours) : 0;
-
     const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
+    
     let bottleText = "";
-    if (bottles === 0) {
-      bottleText = "0병";
-    } else {
+    if (bottles === 0) bottleText = "0병";
+    else {
       const full = Math.floor(bottles);
       const half = bottles % 1 === 0.5;
-      if (full === 0 && half) {
-        bottleText = "반병";
-      } else if (half) {
-        bottleText = `${full}병 반`;
-      } else {
-        bottleText = `${full}병`;
-      }
+      if (full === 0 && half) bottleText = "반병";
+      else if (half) bottleText = `${full}병 반`;
+      else bottleText = `${full}병`;
     }
 
-    function getLevel(bottles: number): string {
-      if (bottles <= 0.5) return "level0";
-      else if (bottles <= 1.5) return "level1";
-      else if (bottles <= 2) return "level3";
-      else return "level4";
+    function getLevel(b: number): string {
+      if (b <= 0.5) return "level0";
+      if (b <= 1.5) return "level1";
+      if (b <= 2) return "level3";
+      return "level4";
     }
     const level = getLevel(bottles);
-    // --- 클라이언트 측 계산 끝 ---
 
-    if (!userId) {
-      // 오프라인 모드 (from connected branch)
+    if (!userId) { // Offline mode
       const aiMessage = `(오프라인 모드) ${nickname}님! 총 ${seconds}초 동안 마셨네요.`;
-      navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage, gph, bottleText },
-      });
+      navigate("/result", { state: { nickname, seconds, drinks, level, aiMessage, gph, bottleText } });
       return;
     }
 
     try {
-      // 백엔드 종료 API 호출 (from connected branch)
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/finish`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to finish session");
-      }
-
-      const data = await response.json();
+      // Use the new finishUser function
+      const data = await finishUser(userId);
       const aiMessage = data.aiMessage || "AI 분석 중...";
 
-      // 결과 페이지로 이동
-      navigate("/result", {
-        state: {
-          nickname,
-          seconds,
-          drinks,
-          level,
-          aiMessage,
-          userId,
-          gph,
-          bottleText,
-        },
-      });
+      navigate("/result", { state: { nickname, seconds, drinks, level, aiMessage, userId, gph, bottleText } });
     } catch (error) {
       console.error("Error finishing session:", error);
-      alert("결과 저장 중 오류가 발생했습니다.");
-      // 에러 발생 시에도 클라이언트 측 데이터로 결과 페이지를 보여줄 수 있습니다.
       navigate("/result", {
         state: {
-          nickname,
-          seconds,
-          drinks,
-          level,
+          nickname, seconds, drinks, level,
           aiMessage: "결과를 저장하는 데 실패했습니다.",
-          userId,
-          gph,
-          bottleText,
+          userId, gph, bottleText,
         },
       });
     }
   };
 
-  const drinkImages = {
-    soju: sojuImg,
-    beer: beerImg,
-    somaek: somaekImg,
-    makgeolli: makgeolliImg,
-    fruitsoju: fruitsojuImg,
-  };
+  const drinkImages = { soju: sojuImg, beer: beerImg, somaek: somaekImg, makgeolli: makgeolliImg, fruitsoju: fruitsojuImg };
 
   const formatTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const hh = String(hours).padStart(2, "0");
-    const mm = String(minutes).padStart(2, "0");
-    const ss = String(seconds).padStart(2, "0");
-
-    return `${hh}:${mm}:${ss}`;
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    const s = String(totalSeconds % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
   };
 
   return (
@@ -201,7 +132,8 @@ export default function MeasurePage() {
       />
 
       <Button onClick={handleEnd}>술자리 끝내기</Button>
-      <RankingList nickname={nickname} sojuEq={calcSojuEq()} />
+      {/* Remove the invalid sojuEq prop */}
+      <RankingList nickname={nickname} />
     </div>
   );
 }
