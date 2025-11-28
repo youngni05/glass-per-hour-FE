@@ -64,24 +64,53 @@ export default function MeasurePage() {
     setIsRunning(false);
     const userId = (location.state as { userId?: number })?.userId;
 
-    if (!userId) {
-      // userId가 없으면(테스트 등) 기존 로직대로 이동
-      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-      let level = "level0";
-      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-      else if (totalDrinks <= 6) level = "level2";
-      else if (totalDrinks <= 9) level = "level3";
-      else level = "level4";
+    // --- 클라이언트 측 계산 (from test branch) ---
+    const sojuEq =
+      drinks.soju +
+      drinks.beer * 0.7 +
+      drinks.somaek * 1.3 +
+      drinks.makgeolli * 0.8 +
+      drinks.fruitsoju * 0.5;
 
+    const hours = seconds / 3600;
+    const gph = hours > 0 ? Math.round(sojuEq / hours) : 0;
+
+    const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
+    let bottleText = "";
+    if (bottles === 0) {
+      bottleText = "0병";
+    } else {
+      const full = Math.floor(bottles);
+      const half = bottles % 1 === 0.5;
+      if (full === 0 && half) {
+        bottleText = "반병";
+      } else if (half) {
+        bottleText = `${full}병 반`;
+      } else {
+        bottleText = `${full}병`;
+      }
+    }
+
+    function getLevel(bottles: number): string {
+      if (bottles <= 0.5) return "level0";
+      else if (bottles <= 1.5) return "level1";
+      else if (bottles <= 2) return "level3";
+      else return "level4";
+    }
+    const level = getLevel(bottles);
+    // --- 클라이언트 측 계산 끝 ---
+
+    if (!userId) {
+      // 오프라인 모드 (from connected branch)
       const aiMessage = `(오프라인 모드) ${nickname}님! 총 ${seconds}초 동안 마셨네요.`;
       navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage },
+        state: { nickname, seconds, drinks, level, aiMessage, gph, bottleText },
       });
       return;
     }
 
     try {
-      // 1. 종료 API 호출
+      // 백엔드 종료 API 호출 (from connected branch)
       const response = await fetch(`${API_BASE_URL}/users/${userId}/finish`, {
         method: "POST",
       });
@@ -91,32 +120,29 @@ export default function MeasurePage() {
       }
 
       const data = await response.json();
-      // BE now returns User object immediately, AI message might be null initially
       const aiMessage = data.aiMessage || "AI 분석 중...";
 
-      // 2. 결과 조회를 위해 유저 정보 가져오기 (혹은 룸 정보)
-      // 현재 finish API는 void 반환이므로, 계산된 결과를 얻으려면 별도 조회가 필요할 수 있음.
-      // 하지만 간단히 프론트에서 계산하거나, BE에서 계산된 값을 믿을 수 있음.
-      // 여기서는 BE 로직(RankingCalculator)과 동일하게 레벨을 보여주기 위해
-      // BE의 User 정보를 조회하는 API가 있다면 좋겠지만, 
-      // 일단 프론트에서 계산해서 넘기거나, finish 응답에 결과를 포함시키는게 좋음.
-      // 현재 BE finish는 void이므로, 프론트에서 계산 로직 유지 혹은 추가 조회 필요.
-
-      // 임시: 프론트 계산 로직 유지하되, BE 데이터 동기화는 추후 고려
-      const totalDrinks = Object.values(drinks).reduce((a, b) => a + b, 0);
-      let level = "level0";
-      if (totalDrinks >= 1 && totalDrinks <= 3) level = "level1";
-      else if (totalDrinks <= 6) level = "level2";
-      else if (totalDrinks <= 9) level = "level3";
-      else level = "level4";
-
+      // 결과 페이지로 이동
       navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage, userId },
+        state: { nickname, seconds, drinks, level, aiMessage, userId, gph, bottleText },
       });
 
     } catch (error) {
       console.error("Error finishing session:", error);
       alert("결과 저장 중 오류가 발생했습니다.");
+      // 에러 발생 시에도 클라이언트 측 데이터로 결과 페이지를 보여줄 수 있습니다.
+      navigate("/result", {
+        state: {
+          nickname,
+          seconds,
+          drinks,
+          level,
+          aiMessage: "결과를 저장하는 데 실패했습니다.",
+          userId,
+          gph,
+          bottleText,
+        },
+      });
     }
   };
 
@@ -133,7 +159,6 @@ export default function MeasurePage() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    // 두 자리로 맞추기 위해 padStart 사용
     const hh = String(hours).padStart(2, "0");
     const mm = String(minutes).padStart(2, "0");
     const ss = String(seconds).padStart(2, "0");
