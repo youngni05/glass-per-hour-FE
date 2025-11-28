@@ -68,7 +68,7 @@ export default function JoinRoom() {
           padding: "10px",
         }}
       >
-        참여하기
+        방 참여하기
       </Button>
     </div>
   );

@@ -1,5 +1,5 @@
 // src/pages/Result.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import html2canvas from "html2canvas";
@@ -39,19 +39,39 @@ export default function ResultPage() {
   const navigate = useNavigate();
   const captureRef = React.useRef<HTMLDivElement>(null);
 
-  const { nickname, level, seconds, drinks, aiMessage } = (location.state as {
-    nickname: string;
-    level: string;
-    seconds: number;
-    drinks: Record<string, number>;
-    aiMessage: string;
-  }) || {
-    nickname: "Guest",
-    seconds: 0,
-    drinks: { soju: 0, beer: 0, somaek: 0, makgeolli: 0, fruitsoju: 0 },
-    level: "level0",
-    aiMessage: "측정된 데이터가 없습니다.",
-  };
+  // 🔹 카카오톡 공유 버튼
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.Kakao &&
+      !window.Kakao.isInitialized()
+    ) {
+      const kakaoKey = process.env.REACT_APP_KAKAO_JS_KEY;
+      if (!kakaoKey) {
+        return;
+      }
+      window.Kakao.init(kakaoKey);
+    }
+  }, []);
+
+  const { nickname, level, seconds, drinks, aiMessage, gph, bottleText } =
+    (location.state as {
+      nickname: string;
+      level: string;
+      seconds: number;
+      drinks: Record<string, number>;
+      aiMessage: string;
+      gph: number;
+      bottleText: string;
+    }) || {
+      nickname: "Guest",
+      seconds: 0,
+      drinks: { soju: 0, beer: 0, somaek: 0, makgeolli: 0, fruitsoju: 0 },
+      level: "level0",
+      aiMessage: "측정된 데이터가 없습니다.",
+      gph: 0,
+      bottleText: "0병",
+    };
 
   const labels: Record<keyof Drinks, string> = {
     soju: "소주",
@@ -93,6 +113,32 @@ export default function ResultPage() {
       link.download = "result.png";
       link.click();
     }
+  };
+
+  const handleKakaoShare = () => {
+    if (!window.Kakao) return;
+
+    window.Kakao.Link.sendDefault({
+      objectType: "feed",
+      content: {
+        title: `${nickname}님의 술레벨 결과`,
+        description: `주량: ${bottleText}\n시속: ${gph} 잔/시간\n${aiMessage}`,
+        imageUrl: "https://your-site.com/share-image.png", // 공유 이미지 URL
+        link: {
+          mobileWebUrl: "https://your-site.com",
+          webUrl: "https://your-site.com",
+        },
+      },
+      buttons: [
+        {
+          title: "앱에서 확인하기",
+          link: {
+            mobileWebUrl: "https://your-site.com",
+            webUrl: "https://your-site.com",
+          },
+        },
+      ],
+    });
   };
 
   return (
@@ -211,11 +257,16 @@ export default function ResultPage() {
         }}
       >
         {/* 7. 결과 저장하기 버튼*/}
-        <Button onClick={saveResultAsImage} style={{ marginBottom: "20px" }}>
-          결과 이미지 저장하기
+        <Button onClick={saveResultAsImage} style={{ marginBottom: "10px" }}>
+          결과 저장하기
         </Button>
 
-        {/* 8. 홈으로 버튼 */}
+        {/*8. 링크 공유하기 버튼*/}
+        <Button onClick={handleKakaoShare} style={{ marginBottom: "10px" }}>
+          링크 공유하기
+        </Button>
+
+        {/* 9. 홈으로 버튼 */}
         <Button onClick={handleRestart}>홈으로</Button>
       </div>
     </div>
