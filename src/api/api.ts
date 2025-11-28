@@ -1,5 +1,5 @@
 // This is the base path that will be proxied by the React development server (see package.json "proxy")
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://118.218.130.193:8000/api';
 
 // Backend User DTO to match API_SPEC_KR.md
 export interface User {
@@ -94,6 +94,18 @@ export const getRankings = async (): Promise<User[]> => {
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to get rankings");
+    }
+    return response.json();
+};
+
+// Corresponds to GET /api/users/{userId}
+export const getUser = async (userId: number): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+        method: "GET",
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to get user");
     }
     return response.json();
 };

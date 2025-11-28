@@ -65,7 +65,7 @@ export default function MeasurePage() {
     const hours = seconds / 3600;
     const gph = hours > 0 ? Math.round(sojuEq / hours) : 0;
     const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
-    
+
     let bottleText = "";
     if (bottles === 0) bottleText = "0병";
     else {
@@ -78,7 +78,7 @@ export default function MeasurePage() {
 
     function getLevel(b: number): string {
       if (b <= 0.5) return "level0";
-      if( b<= 1) return "level1";
+      if (b <= 1) return "level1";
       if (b <= 1.5) return "level2";
       if (b <= 2) return "level3";
       return "level4";
@@ -93,8 +93,8 @@ export default function MeasurePage() {
 
     try {
       // Use the new finishUser function
-      const data = await finishUser(userId);
-      const aiMessage = data.aiMessage || "AI 분석 중...";
+      finishUser(userId).catch(error => console.error("Error finishing session in background:", error));
+      const aiMessage = "AI 분석 중...";
 
       navigate("/result", { state: { nickname, seconds, drinks, level, aiMessage, userId, gph, bottleText } });
     } catch (error) {
