@@ -40,6 +40,21 @@ export default function ResultPage() {
   const navigate = useNavigate();
   const captureRef = useRef<HTMLDivElement>(null);
 
+  // 🔹 카카오톡 공유 버튼
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.Kakao &&
+      !window.Kakao.isInitialized()
+    ) {
+      const kakaoKey = process.env.REACT_APP_KAKAO_JS_KEY;
+      if (!kakaoKey) {
+        return;
+      }
+      window.Kakao.init(kakaoKey);
+    }
+  }, []);
+
   const {
     nickname,
     level,
@@ -75,7 +90,9 @@ export default function ResultPage() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/ai-message`);
+        const response = await fetch(
+          `${API_BASE_URL}/users/${userId}/ai-message`
+        );
         if (response.ok) {
           const data = await response.json();
           if (data.aiMessage && data.aiMessage !== "AI 분석 중...") {
@@ -134,6 +151,32 @@ export default function ResultPage() {
       console.error("Failed to save image:", error);
       alert("이미지 저장에 실패했습니다.");
     }
+  };
+
+  const handleKakaoShare = () => {
+    if (!window.Kakao) return;
+
+    window.Kakao.Link.sendDefault({
+      objectType: "feed",
+      content: {
+        title: `${nickname}님의 술레벨 결과`,
+        description: `주량: ${bottleText}\n시속: ${gph} 잔/시간\n${aiMessage}`,
+        imageUrl: "https://your-site.com/share-image.png", // 공유 이미지 URL
+        link: {
+          mobileWebUrl: "https://your-site.com",
+          webUrl: "https://your-site.com",
+        },
+      },
+      buttons: [
+        {
+          title: "앱에서 확인하기",
+          link: {
+            mobileWebUrl: "https://your-site.com",
+            webUrl: "https://your-site.com",
+          },
+        },
+      ],
+    });
   };
 
   return (
@@ -243,10 +286,17 @@ export default function ResultPage() {
           gap: "10px",
         }}
       >
-        <Button onClick={saveResultAsImage} style={{ marginBottom: "20px" }}>
-          결과 이미지 저장하기
+        {/* 7. 결과 저장하기 버튼*/}
+        <Button onClick={saveResultAsImage} style={{ marginBottom: "10px" }}>
+          결과 저장하기
         </Button>
 
+        {/*8. 링크 공유하기 버튼*/}
+        <Button onClick={handleKakaoShare} style={{ marginBottom: "10px" }}>
+          링크 공유하기
+        </Button>
+
+        {/* 9. 홈으로 버튼 */}
         <Button onClick={handleRestart}>홈으로</Button>
       </div>
     </div>

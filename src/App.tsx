@@ -14,12 +14,12 @@ function App() {
     try {
       const userId = 1; // Hardcoded for testing
       const response = await fetch(`${API_BASE_URL}/users/${userId}/drinks`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          drinkType: 'BEER', // Example value
+          drinkType: "BEER", // Example value
           amount: 500, // Example value
         }),
       });
@@ -47,19 +47,39 @@ function App() {
           <Route path="/result" element={<ResultPage />} />
         </Routes>
       </BrowserRouter>
-      <div style={{ padding: '20px', textAlign: 'center' }}>
+      <div style={{ padding: "20px", textAlign: "center" }}>
         <h1>API Connection Test</h1>
-        <button onClick={testApiConnection} style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}>
+        <button
+          onClick={testApiConnection}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
           Test Backend API (Add Drink for User 1)
         </button>
         {apiResponse && (
-          <div style={{ marginTop: '20px', backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '5px', textAlign: 'left' }}>
+          <div
+            style={{
+              marginTop: "20px",
+              backgroundColor: "#f0f0f0",
+              padding: "15px",
+              borderRadius: "5px",
+              textAlign: "left",
+            }}
+          >
             <h2>API Response:</h2>
             <pre>{apiResponse}</pre>
           </div>
         )}
         {error && (
-          <div style={{ marginTop: '20px', backgroundColor: '#ffe0e0', color: 'red', padding: '15px', borderRadius: '5px', textAlign: 'left' }}>
+          <div
+            style={{
+              marginTop: "20px",
+              backgroundColor: "#ffe0e0",
+              color: "red",
+              padding: "15px",
+              borderRadius: "5px",
+              textAlign: "left",
+            }}
+          >
             <h2>Error:</h2>
             <pre>{error}</pre>
           </div>
@@ -70,4 +90,3 @@ function App() {
 }
 
 export default App;
-

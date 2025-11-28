@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import DrinkList from "./DrinkList";
 import Button from "../../components/ui/Button";
 import { API_BASE_URL } from "../../api";
+import RankingList from "./RankingList";
 
 // 로컬 이미지 import
 import sojuImg from "../../assets/images/소주.jpg";
@@ -51,6 +52,17 @@ export default function MeasurePage() {
         console.error("Failed to record drink:", error);
       }
     }
+  };
+
+  // 소주 환산 함수 정의
+  const calcSojuEq = () => {
+    return (
+      drinks.soju +
+      drinks.beer * 0.7 +
+      drinks.somaek * 1.3 +
+      drinks.makgeolli * 0.8 +
+      drinks.fruitsoju * 0.5
+    );
   };
 
   // 타이머
@@ -124,9 +136,17 @@ export default function MeasurePage() {
 
       // 결과 페이지로 이동
       navigate("/result", {
-        state: { nickname, seconds, drinks, level, aiMessage, userId, gph, bottleText },
+        state: {
+          nickname,
+          seconds,
+          drinks,
+          level,
+          aiMessage,
+          userId,
+          gph,
+          bottleText,
+        },
       });
-
     } catch (error) {
       console.error("Error finishing session:", error);
       alert("결과 저장 중 오류가 발생했습니다.");
@@ -181,6 +201,7 @@ export default function MeasurePage() {
       />
 
       <Button onClick={handleEnd}>술자리 끝내기</Button>
+      <RankingList nickname={nickname} sojuEq={calcSojuEq()} />
     </div>
   );
 }
