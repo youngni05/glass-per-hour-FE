@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DrinkList from "./DrinkList";
 import Button from "../../components/ui/Button";
-import { addDrink, finishUser } from "../../api/api"; // Use the new API functions
+import { addDrink, finishUser } from "../../api/api";
 import RankingList from "./RankingList";
 
 // Local image imports
@@ -17,7 +17,7 @@ export default function MeasurePage() {
   const navigate = useNavigate();
   const { nickname = "Guest", userId } = (location.state as { nickname?: string, userId?: number }) || {};
 
-  const [seconds, setSeconds] = useState(10000);
+  const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
 
   const [drinks, setDrinks] = useState({
@@ -34,9 +34,8 @@ export default function MeasurePage() {
       [type]: Math.max(prev[type] + amount, 0),
     }));
 
-    if (userId && amount > 0) {
+    if (userId) {
       try {
-        // Use the new addDrink function
         await addDrink(userId, type.toUpperCase(), amount);
       } catch (error) {
         console.error("Failed to record drink:", error);
@@ -64,26 +63,36 @@ export default function MeasurePage() {
 
     const hours = seconds / 3600;
     const gph = hours > 0 ? Math.round(sojuEq / hours) : 0;
-    const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
 
     let bottleText = "";
-    if (bottles === 0) bottleText = "0병";
-    else {
-      const full = Math.floor(bottles);
-      const half = bottles % 1 === 0.5;
-      if (full === 0 && half) bottleText = "반병";
-      else if (half) bottleText = `${full}병 반`;
-      else bottleText = `${full}병`;
+    if (sojuEq === 0) {
+      bottleText = "0병";
+    } else {
+      const bottles = Math.round((sojuEq / 7.2) * 2) / 2;
+      if (bottles === 0) {
+        bottleText = "반병 미만";
+      } else {
+        const full = Math.floor(bottles);
+        const half = bottles % 1 === 0.5;
+        if (full === 0 && half) {
+          bottleText = "반병";
+        } else if (half) {
+          bottleText = `${full}병 반`;
+        } else {
+          bottleText = `${full}병`;
+        }
+      }
     }
 
-    function getLevel(b: number): string {
-      if (b <= 0.5) return "level0";
-      if (b <= 1) return "level1";
-      if (b <= 1.5) return "level2";
-      if (b <= 2) return "level3";
+    // Level based on GPH (glasses per hour)
+    function getLevel(gph: number): string {
+      if (gph <= 2) return "level0";
+      if (gph <= 4) return "level1";
+      if (gph <= 6) return "level2";
+      if (gph <= 8) return "level3";
       return "level4";
     }
-    const level = getLevel(bottles);
+    const level = getLevel(gph);
 
     if (!userId) { // Offline mode
       const aiMessage = `(오프라인 모드) ${nickname}님! 총 ${seconds}초 동안 마셨네요.`;
@@ -92,7 +101,6 @@ export default function MeasurePage() {
     }
 
     try {
-      // Use the new finishUser function
       finishUser(userId).catch(error => console.error("Error finishing session in background:", error));
       const aiMessage = "AI 분석 중...";
 
@@ -133,7 +141,6 @@ export default function MeasurePage() {
       />
 
       <Button onClick={handleEnd}>술자리 끝내기</Button>
-      {/* Remove the invalid sojuEq prop */}
       <RankingList nickname={nickname} />
     </div>
   );

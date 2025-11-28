@@ -8,6 +8,11 @@ export interface User {
     joinedAt: string; // ISO-8601 date string
     finishedAt: string | null; // ISO-8601 date string or null
     totalSojuEquivalent: number;
+    sojuCount: number;
+    beerCount: number;
+    somaekCount: number;
+    makgeolliCount: number;
+    fruitsojuCount: number;
     characterLevel: number | null;
     aiMessage: string | null;
     reactionTimes: number[];
