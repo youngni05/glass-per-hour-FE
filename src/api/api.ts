@@ -1,95 +1,99 @@
-export const API_BASE_URL = "/api";
+// This is the base path that will be proxied by the React development server (see package.json "proxy")
+const API_BASE_URL = '/api';
 
-export interface CreateRoomRequest {
-    roomName?: string;
-    userName: string;
-}
-
-export interface CreateRoomResponse {
-    roomCode: string;
-    roomName: string;
-    hostUserId: number;
-    hostUserName: string;
-}
-
-export interface JoinRoomRequest {
-    roomCode: string;
-    userName: string;
-}
-
-export interface JoinRoomResponse {
-    userId: number;
-    userName: string;
-    roomCode: string;
-    roomName: string;
-}
-
-export interface DrinkAddRequest {
-    userId: number;
-    drinkType: string;
-    amount: number;
-}
-
+// Backend User DTO to match API_SPEC_KR.md
 export interface User {
     id: number;
-    name: string;
-    roomId: number;
-    isHost: boolean;
-    characterLevel: number;
-    aiMessage: string;
-    finalRank: number;
-    funnyDescription: string;
-    glassPerHour: number;
+    userName: string;
+    joinedAt: string; // ISO-8601 date string
+    finishedAt: string | null; // ISO-8601 date string or null
+    totalSojuEquivalent: number;
+    characterLevel: number | null;
+    aiMessage: string | null;
+    reactionTimes: number[];
 }
 
-export const createRoom = async (userName: string, roomName?: string): Promise<CreateRoomResponse> => {
-    const response = await fetch(`${API_BASE_URL}/rooms`, {
+// Corresponds to POST /api/users
+export const createUser = async (userName: string): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userName, roomName }),
+        body: JSON.stringify({ userName }),
     });
     if (!response.ok) {
-        throw new Error("Failed to create room");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create user");
     }
     return response.json();
 };
 
-export const joinRoom = async (roomCode: string, userName: string): Promise<JoinRoomResponse> => {
-    const response = await fetch(`${API_BASE_URL}/rooms/join`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ roomCode, userName }),
-    });
-    if (!response.ok) {
-        throw new Error("Failed to join room");
-    }
-    return response.json();
-};
-
+// Corresponds to POST /api/users/{userId}/finish
 export const finishUser = async (userId: number): Promise<User> => {
     const response = await fetch(`${API_BASE_URL}/users/${userId}/finish`, {
         method: "POST",
     });
     if (!response.ok) {
-        throw new Error("Failed to finish user");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to finish user");
     }
     return response.json();
 };
 
-export const addDrink = async (userId: number, drinkType: string, amount: number) => {
+// Corresponds to POST /api/users/{userId}/drinks
+export const addDrink = async (userId: number, drinkType: string, glassCount: number): Promise<User> => {
     const response = await fetch(`${API_BASE_URL}/users/${userId}/drinks`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId, drinkType, glassCount: amount }),
+        // The body should only contain what the API expects, userId is in the path
+        body: JSON.stringify({ drinkType, glassCount }),
     });
     if (!response.ok) {
-        throw new Error("Failed to add drink");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add drink");
+    }
+    return response.json();
+};
+
+// Corresponds to POST /api/users/{userId}/reaction
+export const recordReaction = async (userId: number, reactionTimeMs: number): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/reaction`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reactionTimeMs }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to record reaction time");
+    }
+    return response.json();
+};
+
+// Corresponds to GET /api/users/{userId}/ai-message
+export const getAiMessage = async (userId: number): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/ai-message`, {
+        method: "GET",
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to get AI message");
+    }
+    return response.json();
+};
+
+// Corresponds to GET /api/rankings
+export const getRankings = async (): Promise<User[]> => {
+    const response = await fetch(`${API_BASE_URL}/rankings`, {
+        method: "GET",
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to get rankings");
     }
     return response.json();
 };
