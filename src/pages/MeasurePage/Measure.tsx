@@ -17,7 +17,7 @@ export default function MeasurePage() {
   const navigate = useNavigate();
   const { nickname = "Guest", userId } = (location.state as { nickname?: string, userId?: number }) || {};
 
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(10000);
   const [isRunning, setIsRunning] = useState(true);
 
   const [drinks, setDrinks] = useState({
@@ -78,7 +78,8 @@ export default function MeasurePage() {
 
     function getLevel(b: number): string {
       if (b <= 0.5) return "level0";
-      if (b <= 1.5) return "level1";
+      if( b<= 1) return "level1";
+      if (b <= 1.5) return "level2";
       if (b <= 2) return "level3";
       return "level4";
     }
