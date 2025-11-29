@@ -41,15 +41,6 @@ export default function ResultPage() {
   const [searchParams] = useSearchParams();
   const captureRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (window.Kakao && !window.Kakao.isInitialized()) {
-      const kakaoKey = process.env.REACT_APP_KAKAO_JS_KEY;
-      if (kakaoKey) {
-        window.Kakao.init(kakaoKey);
-      }
-    }
-  }, []);
-
   const [state, setState] = useState<any>(location.state || null);
   const [loading, setLoading] = useState(!location.state);
 
