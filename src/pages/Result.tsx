@@ -140,8 +140,7 @@ export default function ResultPage() {
       content: {
         title: `${nickname}님의 술레벨 결과를 확인하세요!`,
         description: `나의 주량은 시속 몇 잔?`,
-        imageUrl:
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fblog.naver.com%2Fvisualdivekr%2F223721546487&psig=AOvVaw2bW4dnfCZ-g17CbNF2oFxl&ust=1764432863868000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCLCwm_KelZEDFQAAAAAdAAAAABAE",
+        imageUrl: `${window.location.origin}/kakao_share.png`,
         link: {
           mobileWebUrl: "https://localhost:3000",
           webUrl: "https://localhost:3000",
