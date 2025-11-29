@@ -15,7 +15,7 @@ export interface User {
     fruitsojuCount: number;
     characterLevel: number | null;
     aiMessage: string | null;
-    reactionTimes: number[];
+    
 }
 
 // Corresponds to POST /api/users
@@ -63,21 +63,7 @@ export const addDrink = async (userId: number, drinkType: string, glassCount: nu
     return response.json();
 };
 
-// Corresponds to POST /api/users/{userId}/reaction
-export const recordReaction = async (userId: number, reactionTimeMs: number): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/reaction`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reactionTimeMs }),
-    });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to record reaction time");
-    }
-    return response.json();
-};
+
 
 // Corresponds to GET /api/users/{userId}/ai-message
 export const getAiMessage = async (userId: number): Promise<User> => {
