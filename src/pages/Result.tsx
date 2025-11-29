@@ -69,7 +69,9 @@ export default function ResultPage() {
     bottleText: "0병",
   };
 
-  const [aiMessage, setAiMessage] = useState(initialAiMessage || "AI 분석 중...");
+  const [aiMessage, setAiMessage] = useState(
+    initialAiMessage || "AI 분석 중..."
+  );
 
   // Polling for AI message
   useEffect(() => {
@@ -116,7 +118,10 @@ export default function ResultPage() {
     if (!captureRef.current) return;
     try {
       const canvas = await html2canvas(captureRef.current, {
-        useCORS: true, scale: 2, scrollY: -window.scrollY, backgroundColor: "#ffffff",
+        useCORS: true,
+        scale: 2,
+        scrollY: -window.scrollY,
+        backgroundColor: "#ffffff",
       });
       const link = document.createElement("a");
       link.href = canvas.toDataURL("image/png");
@@ -133,40 +138,132 @@ export default function ResultPage() {
     window.Kakao.Link.sendDefault({
       objectType: "feed",
       content: {
-        title: `${nickname}님의 술레벨 결과`,
-        description: `주량: ${bottleText}\n시속: ${gph} 잔/시간\n${aiMessage}`,
-        imageUrl: "https://your-site.com/share-image.png",
-        link: { mobileWebUrl: "https://your-site.com", webUrl: "https://your-site.com" },
+        title: `${nickname}님의 술레벨 결과를 확인하세요!`,
+        description: `나의 주량은 시속 몇 잔?`,
+        imageUrl:
+          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fblog.naver.com%2Fvisualdivekr%2F223721546487&psig=AOvVaw2bW4dnfCZ-g17CbNF2oFxl&ust=1764432863868000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCLCwm_KelZEDFQAAAAAdAAAAABAE",
+        link: {
+          mobileWebUrl: "https://localhost:3000",
+          webUrl: "https://localhost:3000",
+        },
       },
-      buttons: [{ title: "앱에서 확인하기", link: { mobileWebUrl: "https://your-site.com", webUrl: "https://your-site.com" } }],
+      buttons: [
+        {
+          title: "나도 주량 테스트 하러 가기",
+          link: {
+            mobileWebUrl: "https://localhost:3000",
+            webUrl: "https://localhost:3000",
+          },
+        },
+      ],
     });
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+    <div
+      style={{
+        padding: "40px",
+        maxWidth: "600px",
+        margin: "0 auto",
+        textAlign: "center",
+      }}
+    >
       <div ref={captureRef} style={{ padding: "40px", background: "#EDEDEC" }}>
-        <h1 style={{ fontSize: "48px", fontWeight: "bold", marginBottom: "20px" }}>{nickname}님의 술레벨은?</h1>
-        <p style={{ fontSize: "20px", marginBottom: "25px", color: "#555" }}>술자리 가진 시간: {formatTime(seconds)}</p>
-        <p style={{ fontSize: "24px", marginBottom: "10px", fontWeight: "bold" }}>시속: {gph ?? 0} 잔/시간</p>
-        <p style={{ fontSize: "32px", marginBottom: "30px", fontWeight: "bold", color: "#ec0808ff" }}>주량: {bottleText ?? "0병"}</p>
+        <h1
+          style={{ fontSize: "48px", fontWeight: "bold", marginBottom: "20px" }}
+        >
+          {nickname}님의 술레벨은?
+        </h1>
+        <p style={{ fontSize: "20px", marginBottom: "25px", color: "#555" }}>
+          술자리 가진 시간: {formatTime(seconds)}
+        </p>
+        <p
+          style={{ fontSize: "24px", marginBottom: "10px", fontWeight: "bold" }}
+        >
+          시속: {gph ?? 0} 잔/시간
+        </p>
+        <p
+          style={{
+            fontSize: "32px",
+            marginBottom: "30px",
+            fontWeight: "bold",
+            color: "#ec0808ff",
+          }}
+        >
+          주량: {bottleText ?? "0병"}
+        </p>
         <div style={{ marginBottom: "30px" }}>
           <h2 style={{ marginBottom: "15px" }}>술 종류별 잔 수</h2>
           <ul style={{ listStyle: "none", padding: 0, marginBottom: "30px" }}>
             {Object.keys(drinks).map((key) => {
               const k = key as keyof Drinks;
-              return <li key={k} style={{ backgroundColor: "#f0f0f0", padding: "5px", borderRadius: "8px", marginBottom: "8px", fontSize: "16px", fontWeight: "500", textAlign: "center" }}>{labels[k]}: {drinks[k]}잔</li>;
+              return (
+                <li
+                  key={k}
+                  style={{
+                    backgroundColor: "#f0f0f0",
+                    padding: "5px",
+                    borderRadius: "8px",
+                    marginBottom: "8px",
+                    fontSize: "16px",
+                    fontWeight: "500",
+                    textAlign: "center",
+                  }}
+                >
+                  {labels[k]}: {drinks[k]}잔
+                </li>
+              );
             })}
           </ul>
         </div>
-        <img src={levelImages[level]} alt={levelNames[level]} style={{ width: "400px", height: "auto", borderRadius: "10px", marginBottom: "10px" }} />
-        <h2 style={{ marginBottom: "40px", fontWeight: "bold", fontSize: "28px", color: "#333" }}>{levelNames[level]}</h2>
-        <div style={{ backgroundColor: "#f5f5f5", padding: "20px", borderRadius: "10px", border: "1px solid #ccc", textAlign: "left", marginBottom: "25px" }}>
+        <img
+          src={levelImages[level]}
+          alt={levelNames[level]}
+          style={{
+            width: "400px",
+            height: "auto",
+            borderRadius: "10px",
+            marginBottom: "10px",
+          }}
+        />
+        <h2
+          style={{
+            marginBottom: "40px",
+            fontWeight: "bold",
+            fontSize: "28px",
+            color: "#333",
+          }}
+        >
+          {levelNames[level]}
+        </h2>
+        <div
+          style={{
+            backgroundColor: "#f5f5f5",
+            padding: "20px",
+            borderRadius: "10px",
+            border: "1px solid #ccc",
+            textAlign: "left",
+            marginBottom: "25px",
+          }}
+        >
           <p>{aiMessage}</p>
         </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "50px", gap: "10px" }}>
-        <Button onClick={saveResultAsImage} style={{ marginBottom: "10px" }}>결과 저장하기</Button>
-        <Button onClick={handleKakaoShare} style={{ marginBottom: "10px" }}>링크 공유하기</Button>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          marginTop: "50px",
+          gap: "10px",
+        }}
+      >
+        <Button onClick={saveResultAsImage} style={{ marginBottom: "10px" }}>
+          결과 저장하기
+        </Button>
+        <Button onClick={handleKakaoShare} style={{ marginBottom: "10px" }}>
+          링크 공유하기
+        </Button>
         <Button onClick={handleRestart}>홈으로</Button>
       </div>
     </div>
